@@ -2,7 +2,7 @@
 
 ## Descrição
 
-O **GeneSeeker** é uma ferramenta para identificação de **Open Reading Frames (ORFs)** em sequências de DNA. ORFs são regiões de DNA que começam com um códon de início e terminam com um códon de parada, representando potenciais regiões codificantes de proteínas.
+O **GeneSeeker** é uma ferramenta de bioinformática de linha de comando para identificação de **Open Reading Frames (ORFs)** em sequências de DNA. Análisa todos os **6 quadros de leitura** (3 na fita direta + 3 na fita reversa), filtra por tamanho mínimo, traduz as ORFs encontradas para sequências de aminoácidos e gera relatórios em múltiplos formatos.
 
 ### O que são ORFs?
 
@@ -11,43 +11,105 @@ Um **Open Reading Frame (ORF)** é uma sequência contínua de DNA que:
 2. Continua com múltiplos códons de aminoácidos
 3. Termina com um **códon de parada** (TAA, TAG ou TGA)
 
-A identificação de ORFs é crucial para:
+A identificação de ORFs é fundamental para:
 - Predição de genes
 - Anotação de genomas
 - Descoberta de novas proteínas
 - Estudos funcionais
 
+## Arquitetura do Sistema
+
+```
+main.py (CLI / Orquestrador do Pipeline)
+    │
+    ├── geneseeker/sequence.py   — Leitura e validação de arquivos FASTA
+    ├── geneseeker/utils.py      — Utilitários: limpeza e complemento reverso
+    ├── geneseeker/orf_finder.py — Identificação de ORFs nos 6 quadros + tradução
+    └── geneseeker/reporter.py   — Formatação (text/csv/json), exibição e salvamento
+```
+
+O pipeline segue 4 etapas sequenciais:
+
+```
+[Entrada FASTA] → load_sequences() → run_analysis() → output_results() → [Saída]
+```
+
+| Etapa              | Função          | Responsável       |
+|--------------------|-----------------|-------------------|
+| Leitura e validação | `load_sequences()` | sequence + utils  |
+| Identificação de ORFs + tradução | `run_analysis()` | orf_finder |
+| Formatação e saída | `output_results()` | reporter |
+
 ## Funcionalidades
 
-- **Análise de 3 Quadros de Leitura**: Verifica todos os quadros possíveis (0, 1, 2)
-- **Detecção de Codons**: Identifica códons START (ATG) e STOP (TAA, TAG, TGA)
-- **Relatório Estruturado**: Gera relatório em arquivo texto
-- **Sequência Completa**: Extrai a sequência completa de cada ORF encontrado
+- **Análise de 6 Quadros de Leitura**: Verifica todos os frames da fita direta (0, 1, 2) e da fita reversa (0, 1, 2 no complemento reverso)
+- **Filtragem por Tamanho**: Descarta ORFs menores que o limite mínimo configurável (padrão: 100 bp)
+- **Detecção de Códons**: Identifica códons START (ATG) e STOP (TAA, TAG, TGA)
+- **Tradução Automática**: Converte a sequência de DNA de cada ORF em sequência de aminoácidos
+- **Múltiplos Formatos de Saída**: Relatórios em texto legível, CSV ou JSON
+- **Suporte a Múltiplas Sequências**: Processa arquivos FASTA com múltiplas entradas de uma vez
+- **Análise Regulatória**: Identificação de motivos de promotores upstream (TATA box, Pribnow box) *(em desenvolvimento)*
+- **Predição de Sítios de Splicing**: Detecção de junções canônicas GT-AG *(em desenvolvimento)*
+- **Anotação Funcional**: Identificação básica de domínios proteicos (ex: Zinc Finger) *(em desenvolvimento)*
+
+## Estrutura de Módulos
+
+### `geneseeker/sequence.py`
+| Função | Descrição |
+|--------|-----------|
+| `read_fasta(file_path)` | Lê um arquivo FASTA e retorna `{id: sequencia}` |
+| `validate_sequence(sequence)` | Valida se a sequência contém apenas bases válidas (A, C, G, T, N) |
+
+### `geneseeker/utils.py`
+| Função | Descrição |
+|--------|-----------|
+| `clean_sequence(sequence)` | Remove espaços, quebras de linha e normaliza para maiúsculas |
+| `get_reverse_complement(sequence)` | Gera o complemento reverso de uma fita de DNA (5'→3') |
+
+### `geneseeker/orf_finder.py`
+| Função | Descrição |
+|--------|-----------|
+| `find_orfs(sequence, min_length)` | Encontra todas as ORFs nos 6 quadros, filtrando por `min_length` |
+| `translate_orf(orf_sequence)` | Traduz uma sequência de DNA de ORF para aminoácidos |
+
+### `geneseeker/reporter.py`
+| Função | Descrição |
+|--------|-----------|
+| `display_summary(orfs)` | Imprime resumo (total, maior, menor ORF) no terminal |
+| `format_output(orfs, format_type)` | Formata a lista de ORFs em `'text'`, `'csv'` ou `'json'` |
+| `save_results(formatted_output, output_path)` | Salva o resultado formatado em arquivo |
 
 ## Estrutura de Dados
 
-### 📁 `test_data/` - Dados Sintéticos (Commitados)
+### 📁 `test_data/` — Dados Sintéticos (Commitados)
 Contém **55+ arquivos FASTA fabricados** com ORFs conhecidos:
-- ✅ **Commitados no GitHub**
-- 🧪 **ORFs controlados** (quantidade e posição conhecidas)
-- 📊 **Casos de borda** (sem ORFs, muitos ORFs, sobrepostos)
-- 🎯 **Validação garantida**
+- ✅ Commitados no GitHub
+- 🧪 ORFs controlados (quantidade e posição conhecidas)
+- 📊 Casos de borda: sem ORFs, múltiplas ORFs, sobreposições, sequências curtas e longas
+- 🎯 Cobertura por frame: arquivos específicos para frame 0, 1 e 2
 
-**Regenerar:**
+**Regenerar os dados de teste:**
 ```bash
 python generate_test_data.py
 ```
 
-### 📁 `data/` - Dados Reais (Gitignored)
+**Nomenclatura dos arquivos:**
+```
+geneseeker_test_<N>_<descricao>.fasta
+  N: número do caso de teste (01-55+)
+  descricao: tipo do caso (ex: 3orfs, no_orfs, multi_4orfs, short, long, frame0_only)
+```
+
+### 📁 `data/` — Dados Reais (Gitignored)
 Para dados reais do NCBI, genomas, etc.:
-- 🚫 **Ignorado pelo Git** (não vai para GitHub)
-- 🧬 **Dados reais** de pesquisa
-- 💾 **Sem limite de tamanho**
+- 🚫 Ignorado pelo Git (não vai para o GitHub)
+- 🧬 Dados reais de pesquisa
+- 💾 Sem limite de tamanho
 
 **Formatos recomendados:**
-- **Nucleotide FASTA** - Genomas completos ou segmentos
-- **Coding Region (CDS)** - Apenas regiões codificantes
-- **mRNA** - Transcritos processados
+- **Nucleotide FASTA** — Genomas completos ou segmentos
+- **Coding Region (CDS)** — Apenas regiões codificantes
+- **mRNA** — Transcritos processados
 
 ## Instalação
 
@@ -61,43 +123,77 @@ Para dados reais do NCBI, genomas, etc.:
 ```bash
 git clone https://github.com/FellypeMelo/geneseeker.git
 cd geneseeker
+python -m venv venv
+source venv/bin/activate      # Linux/macOS
+# venv\Scripts\activate       # Windows
 pip install -r requirements.txt
 ```
 
 ## Como Usar
 
-### Execução Básica
+### Execução Básica (CLI)
 
 ```bash
-python main.py
+python main.py <arquivo.fasta>
 ```
 
-O programa analisa uma sequência de exemplo e gera um relatório.
+### Argumentos disponíveis
 
-### Modificando a Sequência
+| Argumento | Tipo | Padrão | Descrição |
+|-----------|------|--------|-----------|
+| `input` | posicional | — | Caminho para o arquivo FASTA de entrada |
+| `--output` | opcional | stdout | Caminho para o arquivo de saída |
+| `--min-len` | opcional | `100` | Tamanho mínimo de ORF em pares de bases |
+| `--format` | opcional | `text` | Formato do relatório: `text`, `csv` ou `json` |
 
-Edite a variável `test_sequence` no final do arquivo `main.py`:
+### Exemplos
 
-```python
-test_sequence = "ATGCGATACTGAATGCCCTAGATGAAATAA"
+```bash
+# Análise simples com saída no terminal
+python main.py test_data/geneseeker_test_01_3orfs.fasta
+
+# Filtro de tamanho mínimo de 150 bp com saída em CSV
+python main.py genome.fasta --min-len 150 --format csv --output resultado.csv
+
+# Saída em JSON
+python main.py test_data/geneseeker_test_16_multi_4orfs.fasta --format json --output orfs.json
 ```
 
-### Exemplo de Saída
+### Exemplo de Saída (formato `text`)
 
 ```
 ============================================================
 GeneSeeker - Identificador de ORFs
 ============================================================
+Total de ORFs encontradas: 3
+Maior ORF: 120 bp | Menor ORF: 102 bp
 
-Sequência analisada: ATGCGATACTGAATGCCCTAGATGAAATAA
-Comprimento: 30 bp
+Quadro de Leitura 0 (fita direta):
+  ORF #1:
+    Posição:     0 – 120
+    Comprimento: 120 bp
+    Tradução:    MXXX...
+```
 
+## Testes
 
-Quadro de Leitura 0:
-----------------------------------------
-  ORF encontrado:
-    Posição: 0 - 12
-    Comprimento: 12 bp
+O projeto segue **TDD (Test-Driven Development)**. Os testes ficam em `tests/`.
+
+```bash
+pytest tests/
+```
+
+**Cobertura dos testes (`tests/test_analysis.py`):**
+- Filtragem de ORFs por tamanho mínimo (`test_find_orfs_with_min_len`)
+- Análise de motivos de promotores upstream (`test_analyze_promoters`)
+- Predição de sítios de splicing GT-AG (`test_predict_splice_sites`)
+- Identificação de domínios proteicos Zinc Finger (`test_identify_protein_domains`)
+
+## Dependências
+
+| Pacote | Versão | Uso |
+|--------|--------|-----|
+| `biopython` | 1.81 | Manipulação de sequências biológicas e arquivos FASTA |
     Sequência: ATGCGATACTGA
 
 Quadro de Leitura 1:
