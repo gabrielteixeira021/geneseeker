@@ -16,3 +16,8 @@ Este arquivo registra o status das trilhas (milestones) de desenvolvimento sob a
 - **M3 - Fase 1**: Filtragem e Infra de Análise (Concluída)
 - **M3 - Fase 2**: Análise de Fita Reversa / 6 Frames (Em Progresso)
 - **M3 - Fase 3**: Relatórios JSON/CSV e Finalização (Planejada)
+
+---
+
+- [ ] **Track: Implementação da lógica central de busca de ORFs (6 frames, fita reversa, filtragem) e tradução proteica**
+*Link: [./tracks/core_orf_20260305/](./tracks/core_orf_20260305/)*
