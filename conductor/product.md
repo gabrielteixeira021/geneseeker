@@ -12,8 +12,9 @@ O GeneSeeker é um **Distinguished Software Engine** de bioinformática projetad
 - **Identificação em 6 Quadros**: Varredura completa em fita direta e reversa (complemento reverso).
 - **Filtragem Inteligente**: Parâmetros de tamanho mínimo personalizáveis (bp ou aa).
 - **Tradução Automática**: Conversão instantânea de DNA em sequências de aminoácidos (proteínas).
-- **Análise Regulatória (Planned)**: Identificação de promotores upstream (TATA box, Pribnow box).
-- **Predição Estrutural (Planned)**: Detecção de sítios de splicing (GT-AG) para eucariotos.
+- **Análise Regulatória**: Identificação de promotores upstream (TATA box, Pribnow box).
+- **Predição Estrutural**: Detecção de sítios de splicing (GT-AG) para eucariotos.
+- **Identificação de Domínios**: Busca por motivos proteicos conhecidos (Prosite).
 - **Relatórios Multi-Formato**: Saída em texto puro, CSV e JSON para interoperabilidade.
 
 ## Critérios de Sucesso
@@ -24,5 +25,5 @@ O GeneSeeker é um **Distinguished Software Engine** de bioinformática projetad
 ## Roadmap de Evolução
 - **Milestone 1**: Fundação, leitura FASTA e busca em 3 quadros (Completo).
 - **Milestone 2**: Tradução proteica e identificação de códons STOP (Completo).
-- **Milestone 3**: Análise de fita reversa (6 quadros), filtros e relatórios JSON (Em progresso).
-- **Milestone 4**: Análise de promotores, splicing e integração com BLAST (Planejado).
+- **Milestone 3**: Filtros e Análises Avançadas (Promotores, Splicing, Domínios) (Completo).
+- **Milestone 4**: Integração com Ferramentas Externas (BLAST, HMMER) e Interface Web (Planejado).

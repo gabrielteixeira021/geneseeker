@@ -1,138 +1,84 @@
 """
 GeneSeeker - Identificador de ORFs
-
-Propósito: Identificar Open Reading Frames (ORFs) em sequências de DNA
-analisando os 3 quadros de leitura possíveis.
-
-Um ORF é uma sequência de DNA que começa com um códon de início (ATG)
-e termina com um códon de parada (TAA, TAG ou TGA).
 """
 
 import argparse
+import sys
+from typing import List, Dict, Any
 from geneseeker import sequence, orf_finder, reporter, utils
+from geneseeker.domain import analysis
 
-
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
-
-def parse_args() -> argparse.Namespace: # type: ignore
+def parse_args() -> argparse.Namespace:
     """
-    Define e processa os argumentos da linha de comando.
-
-    Argumentos esperados:
-        input       Caminho para o arquivo FASTA de entrada (obrigatório).
-        --output    Caminho para o arquivo de saída (opcional).
-        --min-len   Tamanho mínimo de ORF em pares de bases (padrão: 100).
-        --format    Formato do relatório de saída: 'text', 'csv' ou 'json' (padrão: 'text').
-
-    Returns:
-        argparse.Namespace: Objeto com os valores dos argumentos.
-
-    TODO:
-    - Criar o parser com argparse.ArgumentParser.
-    - Adicionar todos os argumentos descritos acima.
-    - Retornar parser.parse_args().
+    Processa os argumentos da linha de comando.
     """
-    pass
+    parser = argparse.ArgumentParser(description="GeneSeeker - Identificador de ORFs")
+    parser.add_argument("input", help="Caminho para o arquivo FASTA de entrada")
+    parser.add_argument("--output", help="Caminho para o arquivo de saída")
+    parser.add_argument("--min-len", type=int, default=100, help="Tamanho mínimo de ORF em pb (padrão: 100)")
+    parser.add_argument("--format", choices=["text", "csv", "json"], default="text", help="Formato do relatório")
+    return parser.parse_args()
 
-
-# ---------------------------------------------------------------------------
-# Pipeline steps
-# ---------------------------------------------------------------------------
-
-def load_sequences(input_path: str) -> dict: # type: ignore
+def load_sequences(input_path: str) -> Dict[str, str]:
     """
-    Lê e valida as sequências do arquivo FASTA de entrada.
-
-    Fluxo esperado:
-        1. Chamar sequence.read_fasta() para carregar as sequências.
-        2. Chamar sequence.validate_sequence() em cada sequência carregada.
-        3. Chamar utils.clean_sequence() para normalizar cada sequência válida.
-        4. Retornar o dicionário {id: sequência_limpa} pronto para análise.
-
-    Args:
-        input_path (str): Caminho do arquivo FASTA.
-
-    Returns:
-        dict: Dicionário {id_sequencia: sequencia_normalizada}.
-
-    TODO:
-    - Implementar o fluxo descrito acima.
-    - Emitir aviso (ou ignorar) sequências que falhem na validação.
+    Lê e valida sequências FASTA.
     """
-    pass
+    raw_sequences = sequence.read_fasta(input_path)
+    valid_sequences = {}
+    for seq_id, seq in raw_sequences.items():
+        if sequence.validate_sequence(seq):
+            valid_sequences[seq_id] = seq
+        else:
+            print(f"Aviso: Sequência '{seq_id}' contém caracteres inválidos e será ignorada.")
+    return valid_sequences
 
-
-def run_analysis(sequences: dict, min_len: int) -> list: # type: ignore
+def run_analysis(sequences: Dict[str, str], min_len: int) -> List[Dict[str, Any]]:
     """
-    Executa a identificação de ORFs em todas as sequências carregadas.
-
-    Fluxo esperado:
-        1. Iterar sobre cada sequência do dicionário.
-        2. Chamar orf_finder.find_orfs() passando a sequência e min_len.
-        3. Para cada ORF encontrada, chamar orf_finder.translate_orf() e
-           anexar a tradução ao objeto/dicionário da ORF.
-        4. Acumular e retornar a lista completa de ORFs de todas as sequências.
-
-    Args:
-        sequences (dict): Dicionário {id_sequencia: sequencia}.
-        min_len (int): Comprimento mínimo em pares de bases.
-
-    Returns:
-        list: Lista de todas as ORFs identificadas (com tradução incluída).
-
-    TODO:
-    - Implementar o fluxo descrito acima.
+    Identifica ORFs e realiza análises avançadas.
     """
-    pass
+    all_orfs = []
+    for seq_id, dna in sequences.items():
+        orfs = orf_finder.find_orfs(dna, min_length=min_len)
+        for orf in orfs:
+            orf["sequence_id"] = seq_id
+            # Tradução e análises avançadas
+            orf["translation"] = orf_finder.translate_orf(orf["sequence"])
+            orf["domains"] = analysis.identify_protein_domains(orf["translation"])
+            orf["splice_sites"] = analysis.predict_splice_sites(orf["sequence"])
+            # Promotores (fita direta)
+            orf["promoter"] = analysis.analyze_promoters(dna, orf["start"]) if orf["strand"] == "+" else None
+            all_orfs.append(orf)
+    return all_orfs
 
-
-def output_results(orfs: list, format_type: str, output_path: str | None) -> None:
+def output_results(orfs: List[Dict[str, Any]], format_type: str, output_path: str | None) -> None:
     """
-    Formata, exibe e (opcionalmente) salva os resultados.
-
-    Fluxo esperado:
-        1. Chamar reporter.display_summary() para imprimir o resumo no terminal.
-        2. Chamar reporter.format_output() para obter a string formatada.
-        3. Se output_path foi fornecido, chamar reporter.save_results() para
-           gravar o arquivo; caso contrário, imprimir no stdout.
-
-    Args:
-        orfs (list): Lista de ORFs resultante de run_analysis().
-        format_type (str): Formato de saída ('text', 'csv', 'json').
-        output_path (str | None): Caminho do arquivo de saída, ou None.
-
-    TODO:
-    - Implementar o fluxo descrito acima.
+    Exibe e salva os resultados.
     """
-    pass
-
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
+    reporter.display_summary(orfs)
+    formatted = reporter.format_output(orfs, format_type)
+    if output_path:
+        reporter.save_results(formatted, output_path)
+    else:
+        if format_type != "text":
+            print(formatted)
 
 def main() -> None:
     """
-    Ponto de entrada principal do GeneSeeker.
-
-    Orquestra o pipeline completo:
-        1. parse_args()        — processa os argumentos da CLI.
-        2. load_sequences()    — lê, valida e limpa as sequências FASTA.
-        3. run_analysis()      — identifica ORFs e traduz as sequências.
-        4. output_results()    — formata e exibe/salva os resultados.
-
-    TODO:
-    - Chamar as funções na ordem acima, passando os argumentos corretos.
-    - Encapsular a execução em try/except para tratar erros de I/O e
-      sequências inválidas de forma amigável.
+    Ponto de entrada principal.
     """
-    pass
-
+    args = parse_args()
+    try:
+        sequences = load_sequences(args.input)
+        if not sequences:
+            print("Nenhuma sequência válida encontrada para análise.")
+            return
+            
+        orfs = run_analysis(sequences, args.min_len)
+        output_results(orfs, args.format, args.output)
+        
+    except Exception as e:
+        print(f"Erro fatal: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
-
-
-

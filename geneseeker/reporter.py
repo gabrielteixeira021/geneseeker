@@ -1,48 +1,62 @@
 """
-Módulo responsável pela formatação e exibição dos resultados encontrados.
+Módulo para exibição e salvamento de resultados da análise de ORFs.
 """
 
-def format_output(orfs: list, format_type: str = 'text') -> str:
+import json
+import csv
+from typing import List, Dict, Any
+
+def display_summary(orfs: List[Dict[str, Any]]) -> None:
     """
-    Formata a lista de ORFs encontradas em um formato específico para exibição ou salvamento.
+    Exibe um resumo tabular dos resultados no terminal.
+    """
+    print("-" * 60)
+    print(f"{'ID':<10} {'Início':<8} {'Fim':<8} {'Fita':<5} {'Tam (bp)':<8}")
+    print("-" * 60)
+    for i, orf in enumerate(orfs[:10]):
+        print(f"{i+1:<10} {orf['start']:<8} {orf['end']:<8} {orf['strand']:<5} {orf['length']:<8}")
     
-    Args:
-        orfs (list): Lista de ORFs encontradas (resultado do orf_finder).
-        format_type (str): Formato desejado para a saída ('text', 'csv', 'json', etc.).
-        
-    Returns:
-        str: String formatada contendo os resultados.
-        
-    TODO:
-    - Implementar a lógica para formatar os resultados de forma legível em texto (tabelas, listas).
-    - Adicionar suporte a outros formatos estruturados, se necessário.
+    if len(orfs) > 10:
+        print(f"... e mais {len(orfs) - 10} ORFs.")
+    print("-" * 60)
+    print(f"Total de ORFs identificadas: {len(orfs)}")
+    print("-" * 60)
+
+def format_output(orfs: List[Dict[str, Any]], format_type: str) -> str:
     """
-    pass
+    Formata a lista de ORFs para a string final no formato escolhido.
+    """
+    if format_type == "json":
+        return json.dumps(orfs, indent=2)
+    
+    if format_type == "csv":
+        if not orfs:
+            return ""
+        header = list(orfs[0].keys())
+        import io
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=header)
+        writer.writeheader()
+        writer.writerows(orfs)
+        return output.getvalue()
+    
+    # Texto (Padrão)
+    lines = ["RELATÓRIO GENESEEKER - IDENTIFICAÇÃO DE ORFs", "=" * 60, ""]
+    for i, orf in enumerate(orfs):
+        lines.append(f"ORF #{i+1}")
+        lines.append(f"  Posição: {orf['start']} - {orf['end']} (Fita {orf['strand']}, Frame {orf['frame']})")
+        lines.append(f"  Comprimento: {orf['length']} bp")
+        lines.append(f"  DNA: {orf['sequence'][:50]}...")
+        lines.append("-" * 20)
+    return "\n".join(lines)
 
 def save_results(formatted_output: str, output_path: str) -> None:
     """
-    Salva os resultados formatados em um arquivo no disco.
-    
-    Args:
-        formatted_output (str): A string contendo os resultados devidamente formatados.
-        output_path (str): Caminho do arquivo onde os resultados serão salvos.
-        
-    TODO:
-    - Abrir o arquivo especificado no modo de escrita ('w').
-    - Escrever o conteúdo da string `formatted_output`.
-    - Lidar com possíveis exceções (ex: permissão negada, diretório inexistente).
+    Grava a string formatada no caminho especificado.
     """
-    pass
-
-def display_summary(orfs: list) -> None:
-    """
-    Exibe um resumo tabular ou numérico no terminal sobre as ORFs processadas.
-    
-    Args:
-        orfs (list): Lista de ORFs encontradas.
-        
-    TODO:
-    - Calcular métricas a partir da lista de ORFs (quantidade total, tamanhos médios, maior e menor ORF).
-    - Imprimir as informações de forma limpa e clara utilizando a saída padrão.
-    """
-    pass
+    try:
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(formatted_output)
+        print(f"Resultados salvos em: {output_path}")
+    except Exception as e:
+        print(f"Erro ao salvar arquivo: {e}")
