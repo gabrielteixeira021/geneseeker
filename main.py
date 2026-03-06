@@ -5,8 +5,8 @@ GeneSeeker - Identificador de ORFs
 import argparse
 import sys
 from typing import List, Dict, Any
-from geneseeker import sequence, orf_finder, reporter, utils
-from geneseeker.domain import analysis
+from geneseeker import sequence, reporter, utils
+from geneseeker.domain import orf_finder, analysis
 
 def parse_args() -> argparse.Namespace:
     """

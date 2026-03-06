@@ -1,5 +1,6 @@
 import pytest
-from geneseeker import sequence, orf_finder
+from geneseeker import sequence
+from geneseeker.domain import orf_finder
 
 def test_read_fasta_empty(tmp_path):
     """Testa leitura de arquivo vazio."""
